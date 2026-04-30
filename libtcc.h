@@ -33,6 +33,12 @@ LIBTCCAPI void tcc_set_error_func(TCCState *s, void *error_opaque, TCCErrorFunc 
 /* set options as from command line (multiple supported) */
 LIBTCCAPI int tcc_set_options(TCCState *s, const char *str);
 
+/* return the debug-info level configured on s after option parsing.
+   Zero means no debug info will be emitted; nonzero means some
+   -g/-gdwarf-* flag is in effect. The exact value encodes the level
+   plus internal flags (see s->do_debug). */
+LIBTCCAPI int tcc_get_debug(TCCState *s);
+
 /*****************************/
 /* preprocessor */
 

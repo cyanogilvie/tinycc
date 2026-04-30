@@ -2240,6 +2240,11 @@ LIBTCCAPI int tcc_set_options(TCCState *s, const char *r)
     return ret;
 }
 
+LIBTCCAPI int tcc_get_debug(TCCState *s)
+{
+    return s->do_debug;
+}
+
 PUB_FUNC void tcc_print_stats(TCCState *s1, unsigned total_time)
 {
     if (!total_time)
