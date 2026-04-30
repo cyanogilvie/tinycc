@@ -123,6 +123,14 @@ LIBTCCAPI int tcc_compile_string_file(TCCState *s, const char *buf, const char *
    The filename can be loaded with gdb command add-symbol-file */
 LIBTCCAPI int elf_output_obj(TCCState *s1, const char *filename);
 
+/* As elf_output_obj() but writes to a malloc'd buffer instead of a file.
+   On success *out_buf points to the bytes and *out_size is their length;
+   the caller must free(*out_buf) when done. Useful for handing the .o to
+   the GDB JIT interface or other in-process tooling without a disk
+   round-trip. Same usage constraints as elf_output_obj() (must be called
+   after tcc_relocate, debug info only emitted if -g was set). */
+LIBTCCAPI int elf_output_obj_to_mem(TCCState *s1, void **out_buf, unsigned long *out_size);
+
 /* custom error printer for runtime exceptions. Returning 0 stops backtrace */
 typedef int TCCBtFunc(void *udata, void *pc, const char *file, int line, const char* func, const char *msg);
 LIBTCCAPI void tcc_set_backtrace_func(TCCState *s1, void* userdata, TCCBtFunc*);

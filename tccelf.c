@@ -3102,12 +3102,12 @@ static void alloc_sec_names(TCCState *s1, int is_obj)
     strsec->sh_size = strsec->data_offset;
 }
 
-/* Output an elf .o file */
-LIBTCCAPI int elf_output_obj(TCCState *s1, const char *filename)
+/* Compute section file offsets, as the prelude to writing the ELF.
+   Mutates s1->sections[*]->sh_offset; idempotent. */
+static void elf_obj_set_offsets(TCCState *s1)
 {
     Section *s;
-    int i, ret, file_offset;
-    /* Allocate strings for section names */
+    int i, file_offset;
     alloc_sec_names(s1, 1);
     file_offset = (sizeof (ElfW(Ehdr)) + 3) & -4;
     file_offset += s1->nb_sections * sizeof(ElfW(Shdr));
@@ -3118,8 +3118,71 @@ LIBTCCAPI int elf_output_obj(TCCState *s1, const char *filename)
         if (s->sh_type != SHT_NOBITS)
             file_offset += s->sh_size;
     }
-    /* Create the ELF file with name 'filename' */
-    ret = tcc_write_elf_file(s1, filename, 0, NULL);
+}
+
+/* Output an elf .o file */
+LIBTCCAPI int elf_output_obj(TCCState *s1, const char *filename)
+{
+    elf_obj_set_offsets(s1);
+    return tcc_write_elf_file(s1, filename, 0, NULL);
+}
+
+/* As elf_output_obj() but writes to a malloc'd buffer instead of a file.
+   Caller must free(*out_buf). */
+LIBTCCAPI int elf_output_obj_to_mem(TCCState *s1, void **out_buf, unsigned long *out_size)
+{
+    FILE *f;
+    char *buf = NULL;
+    int ret;
+
+    elf_obj_set_offsets(s1);
+
+#ifdef _WIN32
+    /* open_memstream() is not in the MSVC/MinGW runtime. tmpfile()
+       does still hit disk, but the file is auto-unlinked on close
+       and never has a visible name. */
+    {
+        long len;
+        f = tmpfile();
+        if (!f)
+            return tcc_error_noabort("elf_output_obj_to_mem: tmpfile failed: %s", strerror(errno));
+        ret = tcc_output_elf(s1, f, 0, NULL);
+        if (ret == 0) {
+            if (fseek(f, 0, SEEK_END) != 0 || (len = ftell(f)) < 0) {
+                ret = tcc_error_noabort("elf_output_obj_to_mem: ftell failed: %s", strerror(errno));
+            } else {
+                rewind(f);
+                buf = libc_malloc(len);
+                if (!buf || (long)fread(buf, 1, len, f) != len) {
+                    libc_free(buf), buf = NULL;
+                    ret = tcc_error_noabort("elf_output_obj_to_mem: short read");
+                } else {
+                    *out_size = (unsigned long)len;
+                }
+            }
+        }
+        fclose(f);
+    }
+#else
+    {
+        size_t size = 0;
+        f = open_memstream(&buf, &size);
+        if (!f)
+            return tcc_error_noabort("elf_output_obj_to_mem: open_memstream failed: %s", strerror(errno));
+        ret = tcc_output_elf(s1, f, 0, NULL);
+        /* fclose flushes and finalizes buf/size */
+        if (fclose(f) != 0 && ret == 0)
+            ret = tcc_error_noabort("elf_output_obj_to_mem: fclose failed: %s", strerror(errno));
+        if (ret == 0)
+            *out_size = (unsigned long)size;
+    }
+#endif
+
+    if (ret != 0) {
+        libc_free(buf);
+        return ret;
+    }
+    *out_buf = buf;
     return ret;
 }
 

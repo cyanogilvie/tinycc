@@ -1240,6 +1240,7 @@ PUB_FUNC char *tcc_strdup_debug(const char *str, const char *file, int line);
 #endif
 
 ST_FUNC void libc_free(void *ptr);
+ST_FUNC void *libc_malloc(unsigned long size);
 /* defined to be not used */
 #define free(p) use_tcc_free(p)
 #define malloc(s) use_tcc_malloc(s)

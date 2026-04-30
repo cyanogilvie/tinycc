@@ -234,6 +234,7 @@ static void tcc_concat_str(char **pp, const char *str, int sep)
 /* we'll need the actual versions for a minute */
 #undef free
 #undef realloc
+#undef malloc
 
 static void *default_reallocator(void *ptr, unsigned long size)
 {
@@ -257,9 +258,15 @@ ST_FUNC void libc_free(void *ptr)
     free(ptr);
 }
 
+ST_FUNC void *libc_malloc(unsigned long size)
+{
+    return malloc(size);
+}
+
 /* defined to be not used */
 #define free(p) use_tcc_free(p)
 #define realloc(p, s) use_tcc_realloc(p, s)
+#define malloc(s) use_tcc_malloc(s)
 
 /* global so that every tcc_alloc()/tcc_free() call doesn't need to be changed */
 static void *(*reallocator)(void*, unsigned long) = default_reallocator;
