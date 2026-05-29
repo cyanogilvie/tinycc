@@ -60,6 +60,13 @@
 #if defined _WIN32
     #define __WCHAR_TYPE__ unsigned short
     #define __WINT_TYPE__ unsigned short
+#elif defined __arm__ || defined __aarch64__
+    /* The ARM AAPCS makes wchar_t (and wint_t) unsigned int, on both
+       glibc and musl. wchar_t signedness is an architecture/ABI property,
+       not a libc one: x86 is signed int, ARM is unsigned int, regardless
+       of the C library. */
+    #define __WCHAR_TYPE__ unsigned int
+    #define __WINT_TYPE__ unsigned int
 #elif defined __linux__
     #define __WCHAR_TYPE__ int
     #define __WINT_TYPE__ unsigned int
